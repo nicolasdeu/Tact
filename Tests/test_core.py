@@ -54,7 +54,7 @@ class AddressBookTestCase(unittest.TestCase):
 
         address_book.add_contact(contact)
 
-        self.assertEqual(address_book.get_nb_contacts, 1)
+        self.assertEqual(address_book.get_nb_contacts(), 1)
 
 
 if __name__ == "__main__":

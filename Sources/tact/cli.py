@@ -14,8 +14,8 @@ import os
 import argparse
 
 from tact import util
-# from tact.core import Contact
-# from tact.core import AddressBook
+from tact.core import Contact
+from tact.core import AddressBook
 
 
 # Gets execution directory
@@ -30,19 +30,18 @@ LOG = util.init_logging()
 
 def execute_add(args):
     """ Executes ADD action with arguments given to the command line. """
-    # new_contact = Contact(
-    #     args.firstname, args.lastname,
-    #     args.mailing_address, args.email, args.phone)
+    new_contact = Contact(
+        args.firstname, args.lastname,
+        args.mailing_address, args.email, args.phone)
 
-    # an_address_book = AddressBook()
-    # an_address_book.add_contact(new_contact)
+    an_address_book = AddressBook()
+    an_address_book.add_contact(new_contact)
 
-    # LOG.info(
-    #     "A new contact has been added in Address Book: ".format(new_contact))
-    # LOG.info(
-    #     "There are {} contacts in Address Book."
-    #     .format(an_address_book.get_nb_contacts()))
-    pass
+    LOG.info(
+        "A new contact has been added in Address Book: ".format(new_contact))
+    LOG.info(
+        "There are {} contacts in Address Book."
+        .format(an_address_book.get_nb_contacts()))
 
 
 def run():

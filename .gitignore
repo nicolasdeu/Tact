@@ -2,4 +2,5 @@ logs/**
 venv/**
 *.pyc
 **/__pycache__
-**/*.egg-info
+**/*.egg*
+*.sublime-*
