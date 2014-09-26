@@ -21,6 +21,7 @@ from tact.core import Contact
 #
 # -----------------------------------------------------------------------------
 class ContactTestCase(unittest.TestCase):
+
     """ Test Contact class. """
 
     def test_init_contact(self):
@@ -42,6 +43,7 @@ class ContactTestCase(unittest.TestCase):
 #
 # -----------------------------------------------------------------------------
 class AddressBookTestCase(unittest.TestCase):
+
     """ Test Address Book class. """
 
     def test_add_contact(self):

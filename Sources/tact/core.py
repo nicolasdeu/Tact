@@ -11,12 +11,8 @@
 
 import logging
 
-from tact import util
-
 # Logger
 LOG = logging.getLogger(__name__)
-# Exe dir
-exe_dir = util.get_exe_dir()
 
 
 # -----------------------------------------------------------------------------

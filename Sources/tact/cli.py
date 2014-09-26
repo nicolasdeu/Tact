@@ -18,8 +18,6 @@ from tact import util
 # from tact.core import AddressBook
 
 
-__version__ = util.find_version()
-
 # Gets execution directory
 exe_dir = util.get_exe_dir()
 
@@ -57,7 +55,7 @@ def run():
         ),
         prog='tact')
 
-    tact_version = '%(prog)s ' + __version__
+    tact_version = '%(prog)s ' + util.find_version()
 
     parser.add_argument(
         '--version', action='version',
