@@ -23,18 +23,18 @@ LOG = logging.getLogger(__name__)
 
 class AddressBook:
 
-    """ create a address book and add the create contact. """
+    """ Create a address book and add the create contact. """
 
     def __init__(self):
-        """ initialisation """
+        """ Initialisation """
         self.book = []
 
     def add_contact(self, ctact):
-        """ add a new contact in address book. """
+        """ Add a new contact in address book. """
         self.book.append(ctact)
 
     def get_nb_contacts(self):
-        """ get the number of contact in the address book. """
+        """ Get the number of contact in the address book. """
         return len(self.book)
 
 
@@ -50,8 +50,7 @@ class Contact:
 
     def __init__(
             self, firstname, lastname, mail_address="", email="", phone=""):
-
-        """ initialisation """
+        """ Initialisation """
 
         self.firstname = firstname
         self.lastname = lastname
