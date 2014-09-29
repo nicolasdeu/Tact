@@ -28,13 +28,25 @@ class ContactTestCase(unittest.TestCase):
         """ Test initialization of a new Contact object. """
         expected_firstname_01 = "Albert"
         expected_lastname_01 = "Einstein"
+        expected_phone_01 = "0123456789"
+        expected_email_01 = "alberteinstein@test.fr"
+        expected_mail_address_01 = "1 (rue) de troy"
 
         # Create a new Contact
-        contact_01 = Contact(expected_firstname_01, expected_lastname_01)
+        contact_01 = Contact(
+            expected_firstname_01,
+            expected_lastname_01,
+            phone=expected_phone_01,
+            email=expected_email_01,
+            mail_address=expected_mail_address_01)
 
         # Assert that firstname and lastname have been correctly assigned
         self.assertEqual(contact_01.firstname, expected_firstname_01)
         self.assertEqual(contact_01.lastname, expected_lastname_01)
+        self.assertEqual(contact_01.phone, expected_phone_01)
+        self.assertEqual(contact_01.email, expected_email_01)
+        self.assertEqual(
+            contact_01.expected_mail_address, expected_mail_address_01)
 
 
 # -----------------------------------------------------------------------------
