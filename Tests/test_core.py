@@ -46,7 +46,7 @@ class ContactTestCase(unittest.TestCase):
         self.assertEqual(contact_01.phone, expected_phone_01)
         self.assertEqual(contact_01.email, expected_email_01)
         self.assertEqual(
-            contact_01.mail_address, expected_mail_address_01)
+            contact_01.expected_mail_address, expected_mail_address_01)
 
 
 # -----------------------------------------------------------------------------
