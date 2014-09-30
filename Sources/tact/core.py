@@ -37,6 +37,9 @@ class AddressBook:
         """ Get the number of contact in the address book. """
         return len(self.book)
 
+    def _repr_(self):
+        return ("<address book contain {} >" .format(self.ctact))
+
 
 # -----------------------------------------------------------------------------
 #
@@ -49,14 +52,18 @@ class Contact:
         that order ). """
 
     def __init__(
-            self, firstname, lastname, mail_address="", email="", phone=""):
+            self,
+            firstname, lastname, mailing_address="", emails=[], phones=[]):
         """ Initialisation """
 
         self.firstname = firstname
         self.lastname = lastname
-        self.mail_address = mail_address
-        self.email = email
-        self.phone = phone
+        self.mailing_address = mailing_address
+        self.emails = emails
+        self.phones = phones
+
+    def _repr_(self):
+        return ("contact add {} {} ".format(self.firstname, self.lastname))
 
 
 # -----------------------------------------------------------------------------

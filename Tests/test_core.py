@@ -29,24 +29,33 @@ class ContactTestCase(unittest.TestCase):
         expected_firstname_01 = "Albert"
         expected_lastname_01 = "Einstein"
         expected_phone_01 = "0123456789"
+        expected_phone_02 = "0123856789"
         expected_email_01 = "alberteinstein@test.fr"
+        expected_email_02 = "alberteinstein@abase.fr"
         expected_mail_address_01 = "1 (rue) de troy"
+
+        expected_phones = [expected_phone_01, expected_phone_02]
+        expected_emails = [expected_email_01, expected_email_02]
 
         # Create a new Contact
         contact_01 = Contact(
             expected_firstname_01,
             expected_lastname_01,
-            phone=expected_phone_01,
-            email=expected_email_01,
-            mail_address=expected_mail_address_01)
+            phones=expected_phones,
+            emails=expected_emails,
+            mailing_address=expected_mail_address_01)
 
         # Assert that firstname and lastname have been correctly assigned
         self.assertEqual(contact_01.firstname, expected_firstname_01)
         self.assertEqual(contact_01.lastname, expected_lastname_01)
-        self.assertEqual(contact_01.phone, expected_phone_01)
-        self.assertEqual(contact_01.email, expected_email_01)
+        for phone in expected_phones:
+            self.assertIn(phone, contact_01.phones)
+
+        for email in expected_emails:
+            self.assertIn(email, contact_01.emails)
+
         self.assertEqual(
-            contact_01.mail_address, expected_mail_address_01)
+            contact_01.mailing_address, expected_mail_address_01)
 
 
 # -----------------------------------------------------------------------------

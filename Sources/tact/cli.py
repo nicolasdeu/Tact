@@ -38,7 +38,7 @@ def execute_add(args):
     an_address_book.add_contact(new_contact)
 
     LOG.info(
-        "A new contact has been added in Address Book: ".format(new_contact))
+        "A new contact has been added in Address Book: {} ".format(new_contact))
     LOG.info(
         "There are {} contacts in Address Book."
         .format(an_address_book.get_nb_contacts()))
