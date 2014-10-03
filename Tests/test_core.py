@@ -15,7 +15,6 @@ import csv
 
 from tact.core import AddressBook
 from tact.core import Contact
-from tact.IO import CSVManager
 from tact.util import get_exe_dir
 
 
