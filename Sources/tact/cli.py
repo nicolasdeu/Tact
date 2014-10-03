@@ -16,7 +16,7 @@ import argparse
 from tact import util
 from tact.core import Contact
 from tact.core import AddressBook
-
+from tact.IO import CSVManager
 
 # Gets execution directory
 exe_dir = util.get_exe_dir()
@@ -30,18 +30,26 @@ LOG = util.init_logging()
 
 def execute_add(args):
     """ Executes ADD action with arguments given to the command line. """
+    csv_manager = CSVManager()
+    data = csv_manager.load()
+
     new_contact = Contact(
         args.firstname, args.lastname,
-        args.mailing_address, args.email, args.phone)
+        args.mailing_address, args.emails, args.phones)
 
     an_address_book = AddressBook()
+    an_address_book.import_data(data)
     an_address_book.add_contact(new_contact)
 
     LOG.info(
-        "A new contact has been added in Address Book: {} ".format(new_contact))
+        "A new contact has been added in Address Book: {} ".format(
+            new_contact))
     LOG.info(
         "There are {} contacts in Address Book."
         .format(an_address_book.get_nb_contacts()))
+
+    data = an_address_book.export_data()
+    csv_manager.save(data)
 
 
 def run():

@@ -10,9 +10,17 @@
 ##
 
 import unittest
+import os
+import csv
 
 from tact.core import AddressBook
 from tact.core import Contact
+from tact.IO import CSVManager
+from tact.util import get_exe_dir
+
+
+exe_dir = get_exe_dir()
+tactcsv = os.path.join(exe_dir, 'data', 'tact.csv')
 
 
 # -----------------------------------------------------------------------------
@@ -71,11 +79,36 @@ class AddressBookTestCase(unittest.TestCase):
         """ Test adding a new contact in address book. """
         # Create a new address book and a contact
         address_book = AddressBook()
-        contact = Contact("Brigitte", "Alphonse")
+        contact1 = Contact("Brigitte", "Alphonse")
+        contact2 = Contact("Brigit", "Alphon")
 
-        address_book.add_contact(contact)
+        address_book.add_contact(contact1)
+        address_book.add_contact(contact2)
 
-        self.assertEqual(address_book.get_nb_contacts(), 1)
+        self.assertEqual(address_book.get_nb_contacts(), 2)
+
+
+class TactcsvTestCase (unittest.TestCase):
+
+    """docstring for TactcsvTestCase """
+
+    def test_init_tactcsv(self):
+        fichier = CSVManager()
+        data = [
+            ['Firstname', 'Lastname', 'Home Address', 'Emails', 'Phones'],
+            ['ceci', 'est', 'un', 'test']]
+        fichier.save(data)
+        liste = []
+        with open(tactcsv, newline='') as f:
+            reader = csv.reader(f)
+            for row0 in reader:
+                print(row0)
+                liste.append(row0)
+
+        self.assertEqual(data, liste)
+        os.remove(tactcsv)
+
+
 
 
 if __name__ == "__main__":

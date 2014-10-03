@@ -9,6 +9,7 @@
 # E-Mail           : nicolas.deutschmann@abase.fr
 ##
 
+
 import logging
 
 # Logger
@@ -29,6 +30,15 @@ class AddressBook:
         """ Initialisation """
         self.book = []
 
+    def import_data(self, data):
+        self.book = data
+
+    def find_contact(self, firstname, lastname):
+        """ Find a contact in AddressBook (if the contact exist) """
+        for contact in (self.book):
+            if firstname == contact[0] and lastname == contact[1]:
+                return contact
+
     def add_contact(self, ctact):
         """ Add a new contact in address book. """
         self.book.append(ctact)
@@ -36,6 +46,16 @@ class AddressBook:
     def get_nb_contacts(self):
         """ Get the number of contact in the address book. """
         return len(self.book)
+
+    def export_data(self):
+
+        data = []
+        for contact in self.book:
+            for parametre in contact:
+                if type(parametre) == list:
+                    parametre = "|".join(parametre)
+
+        return data
 
     def _repr_(self):
         return ("<address book contain {} >" .format(self.ctact))
