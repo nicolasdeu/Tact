@@ -15,8 +15,7 @@ import argparse
 
 from tact import util
 from tact.core import Contact
-from tact.core import AddressBook
-from tact.IO import CSVManager
+from tact.core import AddressBookManager
 
 # Gets execution directory
 exe_dir = util.get_exe_dir()
@@ -30,26 +29,22 @@ LOG = util.init_logging()
 
 def execute_add(args):
     """ Executes ADD action with arguments given to the command line. """
-    csv_manager = CSVManager()
-    data = csv_manager.load()
+    book = AddressBookManager.make_address_book()
 
     new_contact = Contact(
         args.firstname, args.lastname,
         args.mailing_address, args.emails, args.phones)
 
-    an_address_book = AddressBook()
-    an_address_book.import_data(data)
-    an_address_book.add_contact(new_contact)
+    book.add_contact(new_contact)
 
     LOG.info(
         "A new contact has been added in Address Book: {} ".format(
             new_contact))
     LOG.info(
         "There are {} contacts in Address Book."
-        .format(an_address_book.get_nb_contacts()))
+        .format(book.get_nb_contacts()))
 
-    data = an_address_book.export_data()
-    csv_manager.save(data)
+    AddressBookManager.save_address_book(book)
 
 
 def run():
@@ -91,14 +86,14 @@ def run():
         dest='mailing_address')
 
     parser_add.add_argument(
-        '-e', '--email', action='store', metavar="EMAIL",
-        help='Contact email address',
-        dest='email')
+        '-e', '--email', action='append', metavar="EMAIL",
+        help='Contact email address', default=[],
+        dest='emails')
 
     parser_add.add_argument(
-        '-p', '--phone', action='store', metavar="PHONE",
-        help='Contact phone number.',
-        dest='phone')
+        '-p', '--phone', action='append', metavar="PHONE",
+        help='Contact phone number.', default=[],
+        dest='phones')
 
     # Join ADD subparser with the dedicated execute method
     parser_add.set_defaults(func=execute_add)
