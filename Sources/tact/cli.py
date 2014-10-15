@@ -158,6 +158,7 @@ def run():
     # Join ADD subparser with the dedicated execute method
     parser_add.set_defaults(func=execute_add)
 
+    # ADD-PHONE action - Arguments parser
     parser_add_phone = subparsers.add_parser(
         'add-phone', help='Add a new phone number to a Contact in Address Book'
         )
@@ -176,6 +177,7 @@ def run():
 
     parser_add_phone.set_defaults(func=execute_add_phone)
 
+    # REMOVE-PHONE action - Arguments parser
     parser_remove_phone = subparsers.add_parser(
         'remove-phone',
         help='renove a phone number of a Contact in Address Book'
@@ -195,6 +197,7 @@ def run():
 
     parser_remove_phone.set_defaults(func=execute_remove_phone)
 
+    # ADD-EMAIL action - Arguments parser
     parser_add_email = subparsers.add_parser(
         'add-email', help='Add a new email to a Contact in Address Book'
         )
@@ -213,6 +216,7 @@ def run():
 
     parser_add_email.set_defaults(func=execute_add_email)
 
+    # REMOVE-EMAIL action - Arguments parser
     parser_remove_email = subparsers.add_parser(
         'remove-email',
         help='renove a emails of a Contact in Address Book'

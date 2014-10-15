@@ -164,7 +164,7 @@ class Contact:
 
     def add_email(self, new_email):
         """ Add the new_email in the list of emails of the contact. """
-        self.email.append(new_email)
+        self.emails.append(new_email)
 
     def remove_email(self, old_email):
         """ remove the old_email address in the list of emails of the contact.
