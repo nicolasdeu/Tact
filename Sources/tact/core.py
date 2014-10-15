@@ -39,6 +39,7 @@ class AddressBook:
         """ Find a contact in AddressBook (if the contact exist) """
         result = None
         tmp_contact = Contact(firstname, lastname)
+        LOG.info(" Address Book {} ".format(self.book))
 
         for contact in self.book:
             if contact == tmp_contact:
@@ -149,6 +150,28 @@ class Contact:
             "|".join(self.emails),
             "|".join(self.phones)
         ]
+
+    def add_phone(self, new_phone):
+        """ Add the new_phone number in the list of phones of the contact. """
+        self.phones.append(new_phone)
+
+    def remove_phone(self, old_phone):
+        """ remove the old_phone number in the list of phones of the contact.
+        if this number exist """
+        for phone in self.phones:
+            if phone == old_phone:
+                self.phones.remove(phone)
+
+    def add_email(self, new_email):
+        """ Add the new_email in the list of emails of the contact. """
+        self.email.append(new_email)
+
+    def remove_email(self, old_email):
+        """ remove the old_email address in the list of emails of the contact.
+        if this email exist """
+        for email in self.emails:
+            if email == old_email:
+                self.emails.remove(email)
 
     def __eq__(self, other):
         return (

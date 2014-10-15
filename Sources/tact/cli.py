@@ -16,6 +16,8 @@ import argparse
 from tact import util
 from tact.core import Contact
 from tact.core import AddressBookManager
+from tact.core import AddressBook
+
 
 # Gets execution directory
 exe_dir = util.get_exe_dir()
@@ -43,6 +45,64 @@ def execute_add(args):
     LOG.info(
         "There are {} contacts in Address Book."
         .format(book.get_nb_contacts()))
+
+    AddressBookManager.save_address_book(book)
+
+
+def execute_add_phone(args):
+    """ If the contact exist add the phone number given """
+    book = AddressBookManager.make_address_book()
+    contact = AddressBook.find_contact(book, args.firstname, args.lastname)
+    if not contact:
+        LOG.info(
+            "No contact who's name {} {} in Address Book ".format(
+                args.firstname, args.lastname))
+    else:
+        contact = Contact.add_phone(contact, args.phone)
+
+    AddressBookManager.save_address_book(book)
+
+
+def execute_remove_phone(args):
+    """ If the contact exist renove the phone number given
+    if this last exist """
+    book = AddressBookManager.make_address_book()
+    contact = AddressBook.find_contact(book, args.firstname, args.lastname)
+    if not contact:
+        LOG.info(
+            "No contact who's name {} {} in Address Book ".format(
+                args.firstname, args.lastname))
+    else:
+        contact = Contact.remove_phone(contact, args.phone)
+
+    AddressBookManager.save_address_book(book)
+
+
+def execute_add_email(args):
+    """ If the contact exist add the email address given """
+    book = AddressBookManager.make_address_book()
+    contact = AddressBook.find_contact(book, args.firstname, args.lastname)
+    if not contact:
+        LOG.info(
+            "No contact who's name {} {} in Address Book ".format(
+                args.firstname, args.lastname))
+    else:
+        contact = Contact.add_email(contact, args.email)
+
+    AddressBookManager.save_address_book(book)
+
+
+def execute_remove_email(args):
+    """ If the contact exist renove the email address given
+    if this last exist """
+    book = AddressBookManager.make_address_book()
+    contact = AddressBook.find_contact(book, args.firstname, args.lastname)
+    if not contact:
+        LOG.info(
+            "No contact who's name {} {} in Address Book ".format(
+                args.firstname, args.lastname))
+    else:
+        contact = Contact.remove_email(contact, args.email)
 
     AddressBookManager.save_address_book(book)
 
@@ -97,6 +157,80 @@ def run():
 
     # Join ADD subparser with the dedicated execute method
     parser_add.set_defaults(func=execute_add)
+
+    parser_add_phone = subparsers.add_parser(
+        'add-phone', help='Add a new phone number to a Contact in Address Book'
+        )
+
+    parser_add_phone.add_argument(
+        'firstname', action='store', metavar='FIRSTNAME',
+        help='Contact firstname.')
+
+    parser_add_phone.add_argument(
+        'lastname', action='store', metavar='LASTNAME',
+        help='Contact lastname.')
+
+    parser_add_phone.add_argument(
+        'phone', action='store', metavar="PHONE",
+        help='Contact phone number.')
+
+    parser_add_phone.set_defaults(func=execute_add_phone)
+
+    parser_remove_phone = subparsers.add_parser(
+        'remove-phone',
+        help='renove a phone number of a Contact in Address Book'
+        )
+
+    parser_remove_phone.add_argument(
+        'firstname', action='store', metavar='FIRSTNAME',
+        help='Contact firstname.')
+
+    parser_remove_phone.add_argument(
+        'lastname', action='store', metavar='LASTNAME',
+        help='Contact lastname.')
+
+    parser_remove_phone.add_argument(
+        'phone', action='store', metavar="PHONE",
+        help='Contact phone number.')
+
+    parser_remove_phone.set_defaults(func=execute_remove_phone)
+
+    parser_add_email = subparsers.add_parser(
+        'add-email', help='Add a new email to a Contact in Address Book'
+        )
+
+    parser_add_email.add_argument(
+        'firstname', action='store', metavar='FIRSTNAME',
+        help='Contact firstname.')
+
+    parser_add_email.add_argument(
+        'lastname', action='store', metavar='LASTNAME',
+        help='Contact lastname.')
+
+    parser_add_email.add_argument(
+        'email', action='store', metavar="EMAIL",
+        help='Contact phone number.')
+
+    parser_add_email.set_defaults(func=execute_add_email)
+
+    parser_remove_email = subparsers.add_parser(
+        'remove-email',
+        help='renove a emails of a Contact in Address Book'
+        )
+
+    parser_remove_email.add_argument(
+        'firstname', action='store', metavar='FIRSTNAME',
+        help='Contact firstname.')
+
+    parser_remove_email.add_argument(
+        'lastname', action='store', metavar='lastname',
+        help='Contact lastname.')
+
+    parser_remove_email.add_argument(
+        'email', action='store', metavar="EMAIL",
+        help='Contact phone number.')
+
+    parser_remove_email.set_defaults(func=execute_remove_email)
 
     # Parse the arguments line
     try:
