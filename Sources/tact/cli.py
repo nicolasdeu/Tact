@@ -18,7 +18,6 @@ from tact.core import Contact
 from tact.core import AddressBookManager
 
 
-
 # Gets execution directory
 exe_dir = util.get_exe_dir()
 
@@ -32,19 +31,35 @@ LOG = util.init_logging()
 def execute_add(args):
     """ Executes ADD action with arguments given to the command line. """
     book = AddressBookManager.make_address_book()
+    double = book.find_contact(args.firstname, args.lastname)
+    if double:
+        pass
+    else:
+        new_contact = Contact(
+            args.firstname, args.lastname,
+            args.mailing_address, args.emails, args.phones)
 
-    new_contact = Contact(
-        args.firstname, args.lastname,
-        args.mailing_address, args.emails, args.phones)
+        book.add_contact(new_contact)
 
-    book.add_contact(new_contact)
+        LOG.info(
+            "A new contact has been added in Address Book: {} ".format(
+                new_contact))
+        LOG.info(
+            "There are {} contacts in Address Book."
+            .format(book.get_nb_contacts()))
 
-    LOG.info(
-        "A new contact has been added in Address Book: {} ".format(
-            new_contact))
-    LOG.info(
-        "There are {} contacts in Address Book."
-        .format(book.get_nb_contacts()))
+    AddressBookManager.save_address_book(book)
+
+
+def execute_remove(args):
+    book = AddressBookManager.make_address_book()
+    contact = book.find_contact(args.firstname, args.lastname)
+    if not contact:
+        LOG.info(
+            "No contact who's name {} {} in Address Book ".format(
+                args.firstname, args.lastname))
+    else:
+        book.remove_contact(contact)
 
     AddressBookManager.save_address_book(book)
 
@@ -157,6 +172,20 @@ def run():
 
     # Join ADD subparser with the dedicated execute method
     parser_add.set_defaults(func=execute_add)
+
+    #REMOVE action - Arguments parser
+    parser_remove = subparsers.add_parser(
+        'remove', help='Add a new Contact in Address Book')
+
+    parser_remove.add_argument(
+        'firstname', action='store', metavar='FIRSTNAME',
+        help='Contact firstname.')
+
+    parser_remove.add_argument(
+        'lastname', action='store', metavar='LASTNAME',
+        help='Contact lastname.')
+
+    parser_remove.set_defaults(func=execute_remove)
 
     # ADD-PHONE action - Arguments parser
     parser_add_phone = subparsers.add_parser(

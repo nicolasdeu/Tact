@@ -64,6 +64,9 @@ class AddressBook:
 
         return data
 
+    def remove_contact(self, old_contact):
+        self.book.remove(old_contact)
+
     def __repr__(self):
         return "<AddressBook {} >" .format(self.book)
 
