@@ -16,7 +16,7 @@ import argparse
 from tact import util
 from tact.core import Contact
 from tact.core import AddressBookManager
-from tact.core import AddressBook
+
 
 
 # Gets execution directory
@@ -52,13 +52,13 @@ def execute_add(args):
 def execute_add_phone(args):
     """ If the contact exist add the phone number given. """
     book = AddressBookManager.make_address_book()
-    contact = AddressBook.find_contact(book, args.firstname, args.lastname)
+    contact = book.find_contact(args.firstname, args.lastname)
     if not contact:
         LOG.info(
             "No contact who's name {} {} in Address Book ".format(
                 args.firstname, args.lastname))
     else:
-        contact = Contact.add_phone(contact, args.phone)
+        contact.add_phone(args.phone)
 
     AddressBookManager.save_address_book(book)
 
