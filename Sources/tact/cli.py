@@ -50,7 +50,7 @@ def execute_add(args):
 
 
 def execute_add_phone(args):
-    """ If the contact exist add the phone number given """
+    """ If the contact exist add the phone number given. """
     book = AddressBookManager.make_address_book()
     contact = AddressBook.find_contact(book, args.firstname, args.lastname)
     if not contact:
@@ -65,44 +65,44 @@ def execute_add_phone(args):
 
 def execute_remove_phone(args):
     """ If the contact exist renove the phone number given
-    if this last exist """
+    if this last exist. """
     book = AddressBookManager.make_address_book()
-    contact = AddressBook.find_contact(book, args.firstname, args.lastname)
+    contact = book.find_contact(args.firstname, args.lastname)
     if not contact:
         LOG.info(
             "No contact who's name {} {} in Address Book ".format(
                 args.firstname, args.lastname))
     else:
-        contact = Contact.remove_phone(contact, args.phone)
+        contact.remove_phone(args.phone)
 
     AddressBookManager.save_address_book(book)
 
 
 def execute_add_email(args):
-    """ If the contact exist add the email address given """
+    """ If the contact exist add the email address given. """
     book = AddressBookManager.make_address_book()
-    contact = AddressBook.find_contact(book, args.firstname, args.lastname)
+    contact = book.find_contact(args.firstname, args.lastname)
     if not contact:
         LOG.info(
             "No contact who's name {} {} in Address Book ".format(
                 args.firstname, args.lastname))
     else:
-        contact = Contact.add_email(contact, args.email)
+        contact.add_email(args.email)
 
     AddressBookManager.save_address_book(book)
 
 
 def execute_remove_email(args):
     """ If the contact exist renove the email address given
-    if this last exist """
+    if this last exist. """
     book = AddressBookManager.make_address_book()
-    contact = AddressBook.find_contact(book, args.firstname, args.lastname)
+    contact = book.find_contact(args.firstname, args.lastname)
     if not contact:
         LOG.info(
             "No contact who's name {} {} in Address Book ".format(
                 args.firstname, args.lastname))
     else:
-        contact = Contact.remove_email(contact, args.email)
+        contact.remove_email(args.email)
 
     AddressBookManager.save_address_book(book)
 

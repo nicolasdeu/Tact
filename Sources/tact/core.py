@@ -158,9 +158,8 @@ class Contact:
     def remove_phone(self, old_phone):
         """ remove the old_phone number in the list of phones of the contact.
         if this number exist """
-        for phone in self.phones:
-            if phone == old_phone:
-                self.phones.remove(phone)
+        if old_phone in self.phones:
+            self.phones.remove(old_phone)
 
     def add_email(self, new_email):
         """ Add the new_email in the list of emails of the contact. """
@@ -169,9 +168,8 @@ class Contact:
     def remove_email(self, old_email):
         """ remove the old_email address in the list of emails of the contact.
         if this email exist """
-        for email in self.emails:
-            if email == old_email:
-                self.emails.remove(email)
+        if old_email in self.emails:
+            self.emails.remove(old_email)
 
     def __eq__(self, other):
         return (
@@ -197,8 +195,14 @@ class ContactFactory:
         firstname = data[0]
         lastname = data[1]
         mailing_address = data[2]
-        emails = data[3].split('|')
-        phones = data[4].split('|')
+        if data[3]:
+            emails = data[3].split('|')
+        else:
+            emails = []
+        if data[4]:
+            phones = data[4].split('|')
+        else:
+            phones = []
 
         return Contact(firstname, lastname, mailing_address, emails, phones)
 
