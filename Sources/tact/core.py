@@ -12,6 +12,7 @@
 import os
 import csv
 import logging
+import re
 
 from tact import util
 
@@ -20,6 +21,9 @@ exe_dir = util.get_exe_dir()
 
 # Logger
 LOG = logging.getLogger(__name__)
+
+
+
 
 
 # -----------------------------------------------------------------------------
@@ -45,6 +49,11 @@ class AddressBook:
             if contact == tmp_contact:
                 result = contact
                 break
+
+        if not contact:
+            LOG.info(
+                "No contact who's name {} {} in Address Book ".format(
+                    firstname, lastname))
 
         return result
 
@@ -156,7 +165,8 @@ class Contact:
 
     def add_phone(self, new_phone):
         """ Add the new_phone number in the list of phones of the contact. """
-        self.phones.append(new_phone)
+        if new_phone:
+            self.phones.append(new_phone)
 
     def remove_phone(self, old_phone):
         """ remove the old_phone number in the list of phones of the contact.
@@ -166,13 +176,23 @@ class Contact:
 
     def add_email(self, new_email):
         """ Add the new_email in the list of emails of the contact. """
-        self.emails.append(new_email)
+        if new_email:
+            self.emails.append(new_email)
 
     def remove_email(self, old_email):
         """ remove the old_email address in the list of emails of the contact.
         if this email exist """
         if old_email in self.emails:
             self.emails.remove(old_email)
+
+    def print_contact(self):
+        print(self.firstname, self.lastname)
+        if self.mailing_address:
+            print(self.mailing_address)
+        for email in self.emails:
+            print(email)
+        for phone in self.phones:
+            print(phone)
 
     def __eq__(self, other):
         return (

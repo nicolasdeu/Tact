@@ -16,6 +16,18 @@ import argparse
 from tact import util
 from tact.core import Contact
 from tact.core import AddressBookManager
+import re
+
+
+def verif(
+    a_verif,
+    regexp=r"^0[0-9]([ .-]?[0-9]{2}){4}$",
+        message=" is not a phone number."):
+    if a_verif:
+        if re.search(regexp, a_verif) is None:
+            print(a_verif, message)
+            a_verif = ""
+    return (a_verif)
 
 
 # Gets execution directory
@@ -30,11 +42,20 @@ LOG = util.init_logging()
 
 def execute_add(args):
     """ Executes ADD action with arguments given to the command line. """
-    book = AddressBookManager.make_address_book()
-    double = book.find_contact(args.firstname, args.lastname)
-    if double:
-        pass
-    else:
+    _execute(args, _execute_add)
+
+
+def _execute_add(args, book, contact):
+    if not contact:
+        for email in args.emails:
+            email = verif(
+                email, r"^[A-Za-z1-9]+@[a-z]+[.][a-z]+$", "no correct email")
+            if not email:
+                args.emails = []
+        for phone in args.phones:
+            phone = verif(phone)
+            if not phone:
+                args.phones = []
         new_contact = Contact(
             args.firstname, args.lastname,
             args.mailing_address, args.emails, args.phones)
@@ -48,77 +69,74 @@ def execute_add(args):
             "There are {} contacts in Address Book."
             .format(book.get_nb_contacts()))
 
-    AddressBookManager.save_address_book(book)
+
+def execute_find(args):
+    _execute(args, _execute_find)
+
+
+def _execute_find(args, book, contact):
+    if contact:
+        contact.print_contact()
 
 
 def execute_remove(args):
-    book = AddressBookManager.make_address_book()
-    contact = book.find_contact(args.firstname, args.lastname)
-    if not contact:
-        LOG.info(
-            "No contact who's name {} {} in Address Book ".format(
-                args.firstname, args.lastname))
-    else:
-        book.remove_contact(contact)
+    _execute(args, _execute_remove)
 
-    AddressBookManager.save_address_book(book)
+
+def _execute_remove(args, book, contact):
+    if contact:
+        book.remove_contact(contact)
 
 
 def execute_add_phone(args):
     """ If the contact exist add the phone number given. """
-    book = AddressBookManager.make_address_book()
-    contact = book.find_contact(args.firstname, args.lastname)
-    if not contact:
-        LOG.info(
-            "No contact who's name {} {} in Address Book ".format(
-                args.firstname, args.lastname))
-    else:
-        contact.add_phone(args.phone)
+    _execute(args, _execute_add_phone)
 
-    AddressBookManager.save_address_book(book)
+
+def _execute_add_phone(args, book, contact):
+    if contact:
+        args.phone = verif(args.phone)
+        contact.add_phone(args.phone)
 
 
 def execute_remove_phone(args):
     """ If the contact exist renove the phone number given
     if this last exist. """
-    book = AddressBookManager.make_address_book()
-    contact = book.find_contact(args.firstname, args.lastname)
-    if not contact:
-        LOG.info(
-            "No contact who's name {} {} in Address Book ".format(
-                args.firstname, args.lastname))
-    else:
-        contact.remove_phone(args.phone)
+    _execute(args, _execute_remove_phone)
 
-    AddressBookManager.save_address_book(book)
+
+def _execute_remove_phone(args, book, contact):
+    if contact:
+        contact.remove_phone(args.phone)
 
 
 def execute_add_email(args):
     """ If the contact exist add the email address given. """
-    book = AddressBookManager.make_address_book()
-    contact = book.find_contact(args.firstname, args.lastname)
-    if not contact:
-        LOG.info(
-            "No contact who's name {} {} in Address Book ".format(
-                args.firstname, args.lastname))
-    else:
-        contact.add_email(args.email)
+    _execute(args, _execute_add_email)
 
-    AddressBookManager.save_address_book(book)
+
+def _execute_add_email(args, book, contact):
+    if contact:
+        args.email = verif(
+            args.email, r"^[A-Za-z1-9]+@[a-z]+[.][a-z]+$", "no correct email")
+        contact.add_email(args.email)
 
 
 def execute_remove_email(args):
     """ If the contact exist renove the email address given
     if this last exist. """
-    book = AddressBookManager.make_address_book()
-    contact = book.find_contact(args.firstname, args.lastname)
-    if not contact:
-        LOG.info(
-            "No contact who's name {} {} in Address Book ".format(
-                args.firstname, args.lastname))
-    else:
+    _execute(args, _execute_remove_email)
+
+
+def _execute_remove_email(args, book, contact):
+    if contact:
         contact.remove_email(args.email)
 
+
+def _execute(args, task_to_execute):
+    book = AddressBookManager.make_address_book()
+    contact = book.find_contact(args.firstname, args.lastname)
+    task_to_execute(args, book, contact)
     AddressBookManager.save_address_book(book)
 
 
@@ -264,6 +282,22 @@ def run():
         help='Contact phone number.')
 
     parser_remove_email.set_defaults(func=execute_remove_email)
+
+    # FIND action - Arguments parser
+    parser_find = subparsers.add_parser(
+        'find',
+        help='find a Contact in Address Book'
+        )
+
+    parser_find.add_argument(
+        'firstname', action='store', metavar='FIRSTNAME',
+        help='Contact firstname.')
+
+    parser_find.add_argument(
+        'lastname', action='store', metavar='lastname',
+        help='Contact lastname.')
+
+    parser_find.set_defaults(func=execute_find)
 
     # Parse the arguments line
     try:
