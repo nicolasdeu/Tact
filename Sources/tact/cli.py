@@ -30,19 +30,30 @@ LOG = util.init_logging()
 def execute(task_to_execute):
     """ Execute decorator. """
     def wrapped(args):
-        book = AddressBookManager.make_address_book()
+        book = AddressBookManager.make()
         args.book = book
         task_to_execute(args)
-        AddressBookManager.save_address_book(book)
+        AddressBookManager.save(book)
     return wrapped
 
 
 @execute
 def execute_add(args):
     """ Executes ADD action with arguments given to the command line. """
-    args.book.add_contact(
-        args.firstname, args.lastname,
-        args.mailing_address, args.emails, args.phones)
+    if not args.book.find_contact(args.firstname, args.lastname):
+        args.book.add_contact(
+            args.firstname,
+            args.lastname,
+            args.mailing_address,
+            args.emails,
+            args.phones)
+        LOG.info(
+            "A new contact has been added in Address Book: {} {} ".format(
+                args.firstname, args.lastname))
+    else:
+        LOG.info(
+            "Contact {} {} already exists in AddressBook.".format(
+                args.firstname, args.lastname))
 
 
 @execute
@@ -50,6 +61,9 @@ def execute_find(args):
     contact = args.book.find_contact(args.firstname, args.lastname)
     if contact:
         print(contact)
+    else:
+        LOG.info("Contact {} {} doesn't exist.".format(
+            args.firstname, args.lastname))
 
 
 @execute

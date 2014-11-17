@@ -15,6 +15,7 @@ import logging
 import re
 
 from tact import util
+from tact.model import DatabaseManager
 
 # Gets execution directory
 exe_dir = util.get_exe_dir()
@@ -32,8 +33,9 @@ class AddressBook:
 
     """ Create a address book and add the create contact. """
 
-    def __init__(self):
+    def __init__(self, name):
         """ Initialisation """
+        self.name = name
         self.book = []
 
     def find_contact(self, firstname, lastname):
@@ -46,11 +48,6 @@ class AddressBook:
                 search_contact = contact
                 break
 
-        if not search_contact:
-            LOG.warn(
-                "Contact {} {} doesn't exist.".format(
-                    firstname, lastname))
-
         return search_contact
 
     def append_contact(self, contact):
@@ -62,30 +59,15 @@ class AddressBook:
             firstname, lastname,
             mailing_address="", emails=[], phones=[]):
         """ Add a new contact in address book. """
-        if not self.find_contact(firstname, lastname):
-            new_contact = Contact(
-                firstname, lastname,
-                mailing_address, emails, phones)
-            self.book.append(new_contact)
-            LOG.info(
-                "A new contact has been added in Address Book: {} ".format(
-                    new_contact))
-        else:
-            LOG.info(
-                "Contact {} {} already exists in AddressBook.".format(
-                    firstname, lastname))
+        new_contact = Contact(
+            firstname, lastname, mailing_address, emails, phones)
+        self.book.append(new_contact)
+
+        return new_contact
 
     def get_nb_contacts(self):
         """ Get the number of contact in the address book. """
         return len(self.book)
-
-    def export_data(self):
-        """ Export data as a list of lists. """
-        data = []
-        for contact in self.book:
-            data.append(contact.export_data())
-
-        return data
 
     def remove_contact(self, firstname, lastname,):
         contact = self.find_contact(firstname, lastname)
@@ -123,20 +105,40 @@ class AddressBook:
 # -----------------------------------------------------------------------------
 class AddressBookManager:
 
-    """ This manager will load and save data from a CSV file to build/store
-    the list of contacts contained into the address book. """
+    """ This manager will load and save data into SQLite database and/or
+    a CSV file to store and/or export the
+    list of contacts contained into the address book. """
 
     DATA_DIR = os.path.join(exe_dir, 'data')
-    DATA_FILE = os.path.join(DATA_DIR, 'tact.csv')
-    DATA_HEADER = ['Firstname', 'Lastname', 'Home Address', 'Emails', 'Phones']
+    DATABASE = os.path.join(exe_dir, DATA_DIR, 'tact.db')
+    CSV_DATA_HEADER = [
+        'Firstname',
+        'Lastname',
+        'Home Address',
+        'Emails',
+        'Phones']
 
     @staticmethod
-    def make_address_book():
-        """ Build an AddressBook with data from a CSV file. """
-        address_book = AddressBook()
+    def make(address_book_name="default"):
+        """ Build an AddressBook and return data from existing database. """
+        address_book = AddressBook(address_book_name)
+        database_manager = DatabaseManager(AddressBookManager.DATABASE)
 
-        if os.path.exists(AddressBookManager.DATA_FILE):
-            with open(AddressBookManager.DATA_FILE, newline='') as csv_data:
+        database_manager.load_data(address_book)
+
+        return address_book
+
+    @staticmethod
+    def save(address_book):
+        """ Save data from address book in database. """
+        database_manager = DatabaseManager(AddressBookManager.DATABASE)
+        database_manager.save_data(address_book)
+
+    @staticmethod
+    def import_csv(address_book, filepath):
+        """ Import data from a CSV file into an address book. """
+        if os.path.exists(filepath):
+            with open(filepath, newline='') as csv_data:
                 reader = csv.reader(
                     csv_data, delimiter=';', quoting=csv.QUOTE_ALL)
 
@@ -147,22 +149,20 @@ class AddressBookManager:
                     contact = ContactFactory.make_contact(line)
                     address_book.append_contact(contact)
         else:
-            LOG.info(
-                "There is no contact previously saved, "
-                "this is a brand new address book.")
+            LOG.error("There is no CSV file to import contact from.")
 
         return address_book
 
     @staticmethod
-    def save_address_book(address_book):
-        """ Save address book on disk into a CSV file. """
-        if not os.path.exists(AddressBookManager.DATA_DIR):
-            os.mkdir(AddressBookManager.DATA_DIR)
+    def export_csv(address_book, filepath):
+        """ Export the current address book into a CSV file. """
+        contact_data = [
+            contact.export_data() for contact in address_book.book]
 
-        book_data = [AddressBookManager.DATA_HEADER] \
-            + address_book.export_data()
+        book_data = [AddressBookManager.CSV_DATA_HEADER] \
+            + contact_data
 
-        with open(AddressBookManager.DATA_FILE, 'w', newline='') as data:
+        with open(filepath, 'w', newline='') as data:
             writer = csv.writer(
                 data, delimiter=';', quoting=csv.QUOTE_ALL)
             writer.writerows(book_data)
@@ -203,7 +203,9 @@ class Contact:
 
     def add_phone(self, new_phone):
         """ Add the new_phone number in the list of phones of the contact. """
-        if new_phone and ContactChecker.check_phone(new_phone):
+        if new_phone and \
+                ContactChecker.check_phone(new_phone) and \
+                new_phone not in self.phones:
             self.phones.append(new_phone)
 
     def remove_phone(self, old_phone):
@@ -214,7 +216,9 @@ class Contact:
 
     def add_email(self, new_email):
         """ Add the new_email in the list of emails of the contact. """
-        if new_email and ContactChecker.check_email(new_email):
+        if new_email and \
+                ContactChecker.check_email(new_email) and \
+                new_email not in self.emails:
             self.emails.append(new_email)
 
     def remove_email(self, old_email):
