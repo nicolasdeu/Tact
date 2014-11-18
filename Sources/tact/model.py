@@ -70,9 +70,6 @@ class DatabaseManager:
                 db_connection = sqlite3.connect(self.db_url)
                 db_cursor = db_connection.cursor()
 
-                # Enable Foreign Keys support
-                db_cursor.execute("PRAGMA foreign_keys=ON")
-
                 # Create address_book table
                 db_cursor.execute(
                     """ CREATE TABLE IF NOT EXISTS address_book
@@ -183,11 +180,7 @@ class DatabaseManager:
                 db_cursor = db_connection.cursor()
 
                 # Insert or update the address book
-                if hasattr(address_book, "id"):
-                    db_cursor.execute(
-                        """ UPDATE address_book SET name = ? WHERE id = ? """,
-                        (address_book.name, address_book.id))
-                else:
+                if not hasattr(address_book, "id"):
                     db_cursor.execute(
                         """ INSERT INTO address_book (name)
                             VALUES (?)""", (address_book.name, ))
