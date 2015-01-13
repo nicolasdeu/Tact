@@ -13,8 +13,9 @@ import sys
 import os
 import argparse
 
+
 from tact import util
-from tact.core import AddressBookManager
+from tact.core import ModelManager
 
 
 # Gets execution directory
@@ -22,65 +23,61 @@ exe_dir = util.get_exe_dir()
 
 # Sets environment variable for the application
 os.environ['TACT_HOME'] = exe_dir
+DATA_DIR = os.path.join(exe_dir, 'data')
+DATA_FILE = os.path.join(DATA_DIR, 'tact.bd')
 
 # Gets a logger
 LOG = util.init_logging()
 
 
-def execute(task_to_execute):
-    """ Execute decorator. """
-    def wrapped(args):
-        book = AddressBookManager.make_address_book()
-        args.book = book
-        task_to_execute(args)
-        AddressBookManager.save_address_book(book)
-    return wrapped
-
-
-@execute
 def execute_add(args):
     """ Executes ADD action with arguments given to the command line. """
-    args.book.add_contact(
-        args.firstname, args.lastname,
+    modelmanager = ModelManager()
+    modelmanager.add_contact(
+        args.addressbook, args.firstname, args.lastname,
         args.mailing_address, args.emails, args.phones)
 
 
-@execute
 def execute_find(args):
-    contact = args.book.find_contact(args.firstname, args.lastname)
-    if contact:
-        print(contact)
+    modelmanager = ModelManager()
+    modelmanager.find(
+        args.addressbook, args.firstname, args.lastname)
 
 
-@execute
 def execute_remove(args):
-    args.book.remove_contact(args.firstname, args.lastname)
+    modelmanager = ModelManager()
+    modelmanager.remove(
+        args.addressbook, args.firstname, args.lastname)
 
 
-@execute
 def execute_add_phone(args):
     """ If the contact exist add the phone number given. """
-    args.book.add_contact_phone(args.firstname, args.lastname, args.phone)
+    modelmanager = ModelManager()
+    modelmanager.add_phone(
+        args.addressbook, args.firstname, args.lastname, args.phone)
 
 
-@execute
 def execute_remove_phone(args):
     """ If the contact exist renove the phone number given
     if this last exist. """
-    args.book.remove_contact_phone(args.firstname, args.lastname, args.phone)
+    modelmanager = ModelManager()
+    modelmanager.remove_phone(
+        args.addressbook, args.firstname, args.lastname, args.phone)
 
 
-@execute
 def execute_add_email(args):
     """ If the contact exist add the email address given. """
-    args.book.add_contact_email(args.firstname, args.lastname, args.email)
+    modelmanager = ModelManager()
+    modelmanager.add_email(
+        args.addressbook, args.firstname, args.lastname, args.email)
 
 
-@execute
 def execute_remove_email(args):
     """ If the contact exist renove the email address given
     if this last exist. """
-    args.book.remove_contact_email(args.firstname, args.lastname, args.email)
+    modelmanager = ModelManager()
+    modelmanager.remove_email(
+        args.addressbook, args.firstname, args.lastname, args.email)
 
 
 def run():
@@ -107,6 +104,10 @@ def run():
         'add', help='Add a new Contact in Address Book')
 
     # Positional arguments for ADD action
+    parser_add.add_argument(
+        'addressbook', action='store', metavar='ADDRESS_BOOK',
+        help='a Address Book where the contact must be saved.')
+
     parser_add.add_argument(
         'firstname', action='store', metavar='FIRSTNAME',
         help='Contact firstname.')
@@ -139,6 +140,10 @@ def run():
         'remove', help='Add a new Contact in Address Book')
 
     parser_remove.add_argument(
+        'addressbook', action='store', metavar='ADDRESS_BOOK',
+        help='THE Address Book where the contact must be delete.')
+
+    parser_remove.add_argument(
         'firstname', action='store', metavar='FIRSTNAME',
         help='Contact firstname.')
 
@@ -152,6 +157,10 @@ def run():
     parser_add_phone = subparsers.add_parser(
         'add-phone', help='Add a new phone number to a Contact in Address Book'
         )
+
+    parser_add_phone.add_argument(
+        'addressbook', action='store', metavar='ADDRESS_BOOK',
+        help='THE Address Book where the contact must be modified.')
 
     parser_add_phone.add_argument(
         'firstname', action='store', metavar='FIRSTNAME',
@@ -174,6 +183,10 @@ def run():
         )
 
     parser_remove_phone.add_argument(
+        'addressbook', action='store', metavar='ADDRESS_BOOK',
+        help='THE Address Book where the contact must be modified.')
+
+    parser_remove_phone.add_argument(
         'firstname', action='store', metavar='FIRSTNAME',
         help='Contact firstname.')
 
@@ -191,6 +204,10 @@ def run():
     parser_add_email = subparsers.add_parser(
         'add-email', help='Add a new email to a Contact in Address Book'
         )
+
+    parser_add_email.add_argument(
+        'addressbook', action='store', metavar='ADDRESS_BOOK',
+        help='THE Address Book where the contact must be modified.')
 
     parser_add_email.add_argument(
         'firstname', action='store', metavar='FIRSTNAME',
@@ -213,6 +230,10 @@ def run():
         )
 
     parser_remove_email.add_argument(
+        'addressbook', action='store', metavar='ADDRESS_BOOK',
+        help='THE Address Book where the contact must be modified.')
+
+    parser_remove_email.add_argument(
         'firstname', action='store', metavar='FIRSTNAME',
         help='Contact firstname.')
 
@@ -231,6 +252,10 @@ def run():
         'find',
         help='find a Contact in Address Book'
         )
+
+    parser_find.add_argument(
+        'addressbook', action='store', metavar='ADDRESS_BOOK',
+        help='THE Address Book where the contact must be modified.')
 
     parser_find.add_argument(
         'firstname', action='store', metavar='FIRSTNAME',

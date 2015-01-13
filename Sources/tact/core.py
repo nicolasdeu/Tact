@@ -10,9 +10,12 @@
 ##
 
 import os
-import csv
 import logging
 import re
+
+from sqlalchemy import Column, Integer, String, create_engine, ForeignKey
+from sqlalchemy.ext.declarative import as_declarative, declared_attr
+from sqlalchemy.orm import sessionmaker, relationship, backref
 
 from tact import util
 
@@ -25,55 +28,49 @@ LOG = logging.getLogger(__name__)
 
 # -----------------------------------------------------------------------------
 #
+# Base
+#
+# -----------------------------------------------------------------------------
+@as_declarative()
+class Base(object):
+
+    '''base class with id field'''
+    @declared_attr
+    def __tablename__(cls):
+        return cls.__name__.lower()
+    __table_args__ = {'sqlite_autoincrement': True}
+    id = Column(Integer, primary_key=True)
+
+
+# -----------------------------------------------------------------------------
+#
 # AddressBook class
 #
 # -----------------------------------------------------------------------------
-class AddressBook:
+class AddressBook(Base):
 
     """ Create a address book and add the create contact. """
 
-    def __init__(self):
-        """ Initialisation """
-        self.book = []
+    name = Column(String(100), nullable=False)
+    contacts = relationship(
+        "Contact", order_by="Contact.id", backref="addressbook")
 
-    def find_contact(self, firstname, lastname):
-        """ Find a contact in AddressBook (if the contact exist) """
-        search_contact = None
-        tmp_contact = Contact(firstname, lastname)
-
-        for contact in self.book:
-            if contact == tmp_contact:
-                search_contact = contact
-                break
-
-        if not search_contact:
-            LOG.warn(
-                "Contact {} {} doesn't exist.".format(
-                    firstname, lastname))
-
-        return search_contact
+    def __init__(self, name="default"):
+        self.name = name
 
     def append_contact(self, contact):
         """ Add a contact directly into AddressBook without any check. """
-        self.book.append(contact)
+        self.contacts.append(contact)
 
     def add_contact(
             self,
             firstname, lastname,
             mailing_address="", emails=[], phones=[]):
-        """ Add a new contact in address book. """
-        if not self.find_contact(firstname, lastname):
-            new_contact = Contact(
-                firstname, lastname,
-                mailing_address, emails, phones)
-            self.book.append(new_contact)
-            LOG.info(
-                "A new contact has been added in Address Book: {} ".format(
-                    new_contact))
-        else:
-            LOG.info(
-                "Contact {} {} already exists in AddressBook.".format(
-                    firstname, lastname))
+        new_contact = Contact(
+            firstname, lastname,
+            mailing_address, emails, phones)
+
+        self.append_contact(new_contact)
 
     def get_nb_contacts(self):
         """ Get the number of contact in the address book. """
@@ -113,59 +110,153 @@ class AddressBook:
             contact.remove_email(email)
 
     def __repr__(self):
-        return "<AddressBook {} >" .format(self.book)
+        return "<AddressBook {} >" .format(self.id)
 
 
 # -----------------------------------------------------------------------------
 #
-# AddressBookManager class
+# ModelManager class
 #
 # -----------------------------------------------------------------------------
-class AddressBookManager:
+class ModelManager:
 
     """ This manager will load and save data from a CSV file to build/store
     the list of contacts contained into the address book. """
 
     DATA_DIR = os.path.join(exe_dir, 'data')
-    DATA_FILE = os.path.join(DATA_DIR, 'tact.csv')
-    DATA_HEADER = ['Firstname', 'Lastname', 'Home Address', 'Emails', 'Phones']
+    DATA_FILE = os.path.join(DATA_DIR, 'tact.db')
 
-    @staticmethod
-    def make_address_book():
-        """ Build an AddressBook with data from a CSV file. """
-        address_book = AddressBook()
+    def __init__(self):
+        """ At all first lauch of the model manager a engine are create """
 
-        if os.path.exists(AddressBookManager.DATA_FILE):
-            with open(AddressBookManager.DATA_FILE, newline='') as csv_data:
-                reader = csv.reader(
-                    csv_data, delimiter=';', quoting=csv.QUOTE_ALL)
+        if not os.path.exists(ModelManager.DATA_DIR):
+            os.mkdir(ModelManager.DATA_DIR)
 
-                # Skip header
-                next(reader)
+        ModelManager.engine = create_engine(
+            'sqlite:///{}'.format(ModelManager.DATA_FILE), echo=False)
+        Base.metadata.create_all(self.engine)
 
-                for line in reader:
-                    contact = ContactFactory.make_contact(line)
-                    address_book.append_contact(contact)
+
+
+    def find_contact(self, sesion, addressbookid, firstname, lastname):
+        """ query to find a contact """
+
+        search_contact = None
+
+        query_find = sesion.query(Contact).filter(
+            Contact.address_book_id == addressbookid).filter(
+            Contact.firstname == firstname).filter(
+            Contact.lastname == lastname)
+        if query_find.all():
+            search_contact = query_find.one()
+
+        return search_contact
+
+
+    def find_addressbook(self, sesion, adressbookname):
+        """ Query to find a address email. """
+
+        book = None
+
+        query_find = sesion.query(AddressBook).filter(
+            AddressBook.name == adressbookname)
+        #print(query_find)
+        if query_find.all():
+            book = query_find.one()
+
+        print(book)
+
+        #sesion.close()
+
+        return book
+
+    def find_id_addressbook(self, sesion, adressbookname):
+
+        idab = None
+
+        query_find = sesion.query(AddressBook.id).filter(
+            AddressBook.name == adressbookname)
+        #print(query_find)
+        if query_find.all():
+            idab = query_find.one()
+            idab = idab[0]
+
+        print(type(idab))
+
+        #sesion.close()
+
+        return idab
+
+    def add_contact(
+            self, abname, firstname, lastname,
+            mailing_address, emails, phones):
+
+        Session = sessionmaker(bind=ModelManager.engine)
+        sesion = Session()
+
+        address_book = self.find_addressbook(sesion, abname)
+        if address_book:
+            print(address_book)
+            abid = self.find_id_addressbook(sesion, abname)
+            test_contact = self.find_contact(
+                sesion, abid, firstname, lastname)
+            address_book.add_contact(
+                firstname, lastname, mailing_address, emails, phones)
+
+            #print("test")
         else:
-            LOG.info(
-                "There is no contact previously saved, "
-                "this is a brand new address book.")
+            address_book = AddressBook(abname)
+            address_book.add_contact(
+                firstname, lastname, mailing_address, emails, phones)
 
-        return address_book
+        #print("test")
 
-    @staticmethod
-    def save_address_book(address_book):
-        """ Save address book on disk into a CSV file. """
-        if not os.path.exists(AddressBookManager.DATA_DIR):
-            os.mkdir(AddressBookManager.DATA_DIR)
+        sesion.add(address_book)
+        sesion.commit()
 
-        book_data = [AddressBookManager.DATA_HEADER] \
-            + address_book.export_data()
+        sesion.close()
 
-        with open(AddressBookManager.DATA_FILE, 'w', newline='') as data:
-            writer = csv.writer(
-                data, delimiter=';', quoting=csv.QUOTE_ALL)
-            writer.writerows(book_data)
+    def find(
+            self, abname, firstname, lastname):
+
+        Session = sessionmaker(bind=ModelManager.engine)
+        sesion = Session()
+        contact = None
+
+        id_address_book = self.find_id_addressbook(sesion, abname)
+
+        if id_address_book:
+            contact = self.find_contact(
+                sesion, id_address_book, firstname, lastname)
+
+        print(contact)
+
+        sesion.close()
+
+    def remove(self, abname, firstname, lastname):
+
+        Session = sessionmaker(bind=ModelManager.engine)
+        sesion = Session()
+
+        id_address_book = self.find_id_addressbook(sesion, abname)
+
+        if id_address_book:
+            contact = self.find_contact(
+                sesion, id_address_book, firstname, lastname)
+            sesion.delete(contact)
+
+        sesion.commit()
+
+        sesion.close()
+
+
+#        """ Save ddress book on disk into a DB file. """
+#        Session = sessionmaker(bind=ModelManager.engine)
+#        sesion = Session()
+#        for elem in address_book.book:
+#            sesion.add(elem)
+#        sesion.commit()
+#        sesion.close()
 
 
 # -----------------------------------------------------------------------------
@@ -173,25 +264,37 @@ class AddressBookManager:
 # Contact class
 #
 # -----------------------------------------------------------------------------
-class Contact:
+class Contact(Base):
 
     """ Create a new contact (firstname and lastname are obligatory and in
         that order). """
 
+    firstname = Column(String(50), nullable=False)
+    lastname = Column(String(50), nullable=False)
+    mailing_address = Column(String(50), nullable=True)
+    phones = relationship("Phone", order_by="Phone.id")
+    emails = relationship("Email", order_by="Email.id")
+    address_book_id = Column(Integer, ForeignKey('addressbook.id'))
+
     def __init__(
             self,
-            firstname, lastname, mailing_address="", emails=[], phones=[]):
+            firstname,
+            lastname, mailing_address="", emails=[], phones=[]):
         """ Initialisation """
 
         self.firstname = firstname
         self.lastname = lastname
         self.mailing_address = mailing_address
-        self.phones = [
-            phone for phone in phones if ContactChecker.check_phone(phone)]
-        self.emails = [
-            email for email in emails if ContactChecker.check_email(email)]
+        for phone in phones:
+            if ContactChecker.check_phone(phone):
+                correct_phone = Phone(phone)
+                self.phones.append(correct_phone)
+        for email in emails:
+            if ContactChecker.check_email(email):
+                correct_email = Email(email)
+                self.emails.append(correct_email)
 
-    def export_data(self):
+    def export_data(self):  # for saving into a csv or text file
         """ Export data as a list. """
         return [
             self.firstname,
@@ -203,8 +306,12 @@ class Contact:
 
     def add_phone(self, new_phone):
         """ Add the new_phone number in the list of phones of the contact. """
-        if new_phone and ContactChecker.check_phone(new_phone):
-            self.phones.append(new_phone)
+        if new_phone and \
+            ContactChecker.check_phone(new_phone) and \
+                new_phone not in self.phones:
+            new_correct_phone = Phone(new_phone)
+            self.phones.append(new_correct_phone)
+
 
     def remove_phone(self, old_phone):
         """ remove the old_phone number in the list of phones of the contact.
@@ -214,8 +321,11 @@ class Contact:
 
     def add_email(self, new_email):
         """ Add the new_email in the list of emails of the contact. """
-        if new_email and ContactChecker.check_email(new_email):
-            self.emails.append(new_email)
+        if new_email and \
+            ContactChecker.check_email(new_email) and \
+                new_email not in self.emails:
+            new_correct_email = Email(new_email)
+            self.emails.append(new_correct_email)
 
     def remove_email(self, old_email):
         """ remove the old_email address in the list of emails of the contact.
@@ -245,7 +355,7 @@ class Contact:
 
 # -----------------------------------------------------------------------------
 #
-# ContactFactory class
+# ContactFactory class for importation of contact
 #
 # -----------------------------------------------------------------------------
 class ContactFactory:
@@ -307,10 +417,43 @@ class ContactChecker:
 
 # -----------------------------------------------------------------------------
 #
+# Phone class
+#
+# -----------------------------------------------------------------------------
+class Phone(Base):
+    phonenumber = Column(String(22), nullable=False)
+    contact_id = Column(Integer, ForeignKey('contact.id'))
+
+    def __init__(self, phone):
+        self.phonenumber = phone
+
+    def __str__(self):
+        to_display = "{}".format(self.phonenumber)
+        return(to_display)
+
+
+# -----------------------------------------------------------------------------
+#
+# Email class
+#
+# -----------------------------------------------------------------------------
+class Email(Base):
+    address = Column(String(150), nullable=False)
+    contact_id = Column(Integer, ForeignKey('contact.id'))
+
+    def __init__(self, email):
+        self.address = email
+
+    def __str__(self):
+        to_display = "{}".format(self.address)
+        return(to_display)
+
+
+# -----------------------------------------------------------------------------
+#
 # Exceptions
 #
 # -----------------------------------------------------------------------------
-
 class ContactError(Exception):
     pass
 

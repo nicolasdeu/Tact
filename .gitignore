@@ -5,3 +5,4 @@ venv/**
 **/*.egg*
 *.sublime-*
 data/*
+*.ipynb
