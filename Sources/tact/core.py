@@ -15,7 +15,7 @@ import re
 
 from sqlalchemy import Column, Integer, String, create_engine, ForeignKey
 from sqlalchemy.ext.declarative import as_declarative, declared_attr
-from sqlalchemy.orm import sessionmaker, relationship, backref
+from sqlalchemy.orm import sessionmaker, relationship
 
 from tact import util
 
@@ -53,10 +53,26 @@ class AddressBook(Base):
 
     name = Column(String(100), nullable=False)
     contacts = relationship(
-        "Contact", order_by="Contact.id", backref="addressbook")
+        "Contact",
+        order_by="Contact.id", cascade="all,delete", backref="addressbook", )
 
     def __init__(self, name="default"):
         self.name = name
+
+    def find_contact(self, firstname, lastname):
+        """ Find a contact in AddressBook (if the contact exist) """
+        search_contact = None
+        tmp_contact = Contact(firstname, lastname)
+
+        for contact in self.contacts:
+            if contact == tmp_contact:
+                search_contact = contact
+                break
+        if not search_contact:
+            LOG.warn(
+                "Contact {} {} doesn't exist.".format(
+                    firstname, lastname))
+        return search_contact
 
     def append_contact(self, contact):
         """ Add a contact directly into AddressBook without any check. """
@@ -66,11 +82,16 @@ class AddressBook(Base):
             self,
             firstname, lastname,
             mailing_address="", emails=[], phones=[]):
-        new_contact = Contact(
-            firstname, lastname,
-            mailing_address, emails, phones)
 
-        self.append_contact(new_contact)
+        test_contact = self.find_contact(firstname, lastname)
+        if not test_contact:
+            new_contact = Contact(
+                firstname, lastname,
+                mailing_address, emails, phones)
+
+            self.append_contact(new_contact)
+        else:
+            pass
 
     def get_nb_contacts(self):
         """ Get the number of contact in the address book. """
@@ -84,10 +105,10 @@ class AddressBook(Base):
 
         return data
 
-    def remove_contact(self, firstname, lastname,):
+    def remove_contact(self, sesion, firstname, lastname,):
         contact = self.find_contact(firstname, lastname)
         if contact:
-            self.book.remove(contact)
+            sesion.delete(contact)
 
     def add_contact_phone(self, firstname, lastname, phone):
         contact = self.find_contact(firstname, lastname)
@@ -110,7 +131,8 @@ class AddressBook(Base):
             contact.remove_email(email)
 
     def __repr__(self):
-        return "<AddressBook {} >" .format(self.id)
+        return "<AddressBook {} have {} contact>".format(
+            self.name, len(self.contacts))
 
 
 # -----------------------------------------------------------------------------
@@ -136,64 +158,6 @@ class ModelManager:
             'sqlite:///{}'.format(ModelManager.DATA_FILE), echo=False)
         Base.metadata.create_all(self.engine)
 
-    def find_phone(self, sesion, contactid, phone):
-        """ query to find a contact phone """
-
-        search_phone = None
-
-        query_find = sesion.query(Phone).filter(
-            Phone.contact_id == contactid).filter(
-            Phone.phonenumber == phone)
-        if query_find.all():
-            search_phone = query_find.one()
-
-        return search_phone
-
-    def find_email(self, sesion, contactid, email):
-        """ query to find a contact email """
-
-        search_email = None
-
-        query_find = sesion.query(Email).filter(
-            Email.contact_id == contactid).filter(
-            Email.address == email)
-        if query_find.all():
-            search_email = query_find.one()
-
-        return search_email
-
-    def find_contact(self, sesion, addressbookid, firstname, lastname):
-        """ query to find a contact """
-
-        search_contact = None
-
-        query_find = sesion.query(Contact).filter(
-            Contact.address_book_id == addressbookid).filter(
-            Contact.firstname == firstname).filter(
-            Contact.lastname == lastname)
-        if query_find.all():
-            search_contact = query_find.one()
-
-        return search_contact
-
-    def find_id_contact(self, sesion, addressbookid, firstname, lastname):
-        """ Query to find a contact id. """
-
-        idcontact = None
-
-        query_find = sesion.query(Contact.id).filter(
-            Contact.address_book_id == addressbookid).filter(
-            Contact.firstname == firstname).filter(
-            Contact.lastname == lastname)
-        #print(query_find)
-        if query_find.all():
-            idcontact = query_find.one()
-            idcontact = idcontact[0]
-
-        #sesion.close()
-
-        return idcontact
-
     def find_addressbook(self, sesion, adressbookname):
         """ Query to find a address email. """
 
@@ -201,32 +165,11 @@ class ModelManager:
 
         query_find = sesion.query(AddressBook).filter(
             AddressBook.name == adressbookname)
-        #print(query_find)
+
         if query_find.all():
             book = query_find.one()
 
-        print(book)
-
-        #sesion.close()
-
         return book
-
-    def find_id_addressbook(self, sesion, adressbookname):
-
-        idab = None
-
-        query_find = sesion.query(AddressBook.id).filter(
-            AddressBook.name == adressbookname)
-        #print(query_find)
-        if query_find.all():
-            idab = query_find.one()
-            idab = idab[0]
-
-        print(type(idab))
-
-        #sesion.close()
-
-        return idab
 
     def add_contact(
             self, abname, firstname, lastname,
@@ -237,23 +180,15 @@ class ModelManager:
 
         address_book = self.find_addressbook(sesion, abname)
         if address_book:
-            print(address_book)
-            abid = self.find_id_addressbook(sesion, abname)
-            test_contact = self.find_contact(
-                sesion, abid, firstname, lastname)
-            if test_contact:
-                print(test_contact)
-            else:
-                address_book.add_contact(
-                    firstname, lastname, mailing_address, emails, phones)
+            address_book.add_contact(
+                firstname, lastname, mailing_address, emails, phones)
 
-            #print("test")
         else:
             address_book = AddressBook(abname)
             address_book.add_contact(
                 firstname, lastname, mailing_address, emails, phones)
 
-        #print("test")
+        print(address_book)
 
         sesion.add(address_book)
         sesion.commit()
@@ -267,11 +202,10 @@ class ModelManager:
         sesion = Session()
         contact = None
 
-        id_address_book = self.find_id_addressbook(sesion, abname)
+        address_book = self.find_addressbook(sesion, abname)
 
-        if id_address_book:
-            contact = self.find_contact(
-                sesion, id_address_book, firstname, lastname)
+        if address_book:
+            contact = address_book.find_contact(firstname, lastname)
 
         print(contact)
 
@@ -282,12 +216,10 @@ class ModelManager:
         Session = sessionmaker(bind=ModelManager.engine)
         sesion = Session()
 
-        id_address_book = self.find_id_addressbook(sesion, abname)
+        address_book = self.find_addressbook(sesion, abname)
 
-        if id_address_book:
-            contact = self.find_contact(
-                sesion, id_address_book, firstname, lastname)
-            sesion.delete(contact)
+        if address_book:
+            address_book.remove_contact(sesion, firstname, lastname)
 
         sesion.commit()
 
@@ -297,21 +229,12 @@ class ModelManager:
         Session = sessionmaker(bind=ModelManager.engine)
         sesion = Session()
 
-        print("test")
+        address_book = self.find_addressbook(sesion, abname)
 
-        id_address_book = self.find_id_addressbook(sesion, abname)
-
-        print("test")
-
-        if id_address_book:
-            contact = self.find_contact(
-                sesion, id_address_book, firstname, lastname)
+        if address_book:
+            contact = address_book.find_contact(firstname, lastname)
             if contact:
-                id_contact = self.find_id_contact(
-                    sesion, id_address_book, firstname, lastname)
-                test_phone = self.find_phone(sesion, id_contact, phone)
-                if not test_phone:
-                    contact.add_phone(phone)
+                contact.add_phone(phone)
 
         sesion.commit()
 
@@ -321,19 +244,12 @@ class ModelManager:
         Session = sessionmaker(bind=ModelManager.engine)
         sesion = Session()
 
-        print("test")
+        address_book = self.find_addressbook(sesion, abname)
 
-        id_address_book = self.find_id_addressbook(sesion, abname)
-
-        print("test")
-
-        if id_address_book:
-            contact = self.find_contact(
-                sesion, id_address_book, firstname, lastname)
+        if address_book:
+            contact = address_book.find_contact(firstname, lastname)
             if contact:
-                id_contact = self.find_id_contact(
-                    sesion, id_address_book, firstname, lastname)
-                test_phone = self.find_phone(sesion, id_contact, phone)
+                test_phone = contact.find_phone(phone)
                 if test_phone:
                     sesion.delete(test_phone)
 
@@ -345,21 +261,12 @@ class ModelManager:
         Session = sessionmaker(bind=ModelManager.engine)
         sesion = Session()
 
-        print("test")
+        address_book = self.find_addressbook(sesion, abname)
 
-        id_address_book = self.find_id_addressbook(sesion, abname)
-
-        print("test")
-
-        if id_address_book:
-            contact = self.find_contact(
-                sesion, id_address_book, firstname, lastname)
+        if address_book:
+            contact = address_book.find_contact(firstname, lastname)
             if contact:
-                id_contact = self.find_id_contact(
-                    sesion, id_address_book, firstname, lastname)
-                test_email = self.find_email(sesion, id_contact, email)
-                if not test_email:
-                    contact.add_email(email)
+                contact.add_email(email)
 
         sesion.commit()
 
@@ -369,34 +276,18 @@ class ModelManager:
         Session = sessionmaker(bind=ModelManager.engine)
         sesion = Session()
 
-        print("test")
+        address_book = self.find_addressbook(sesion, abname)
 
-        id_address_book = self.find_id_addressbook(sesion, abname)
-
-        print("test")
-
-        if id_address_book:
-            contact = self.find_contact(
-                sesion, id_address_book, firstname, lastname)
+        if address_book:
+            contact = address_book.find_contact(firstname, lastname)
             if contact:
-                id_contact = self.find_id_contact(
-                    sesion, id_address_book, firstname, lastname)
-                test_email = self.find_email(sesion, id_contact, email)
+                test_email = contact.find_email(email)
                 if test_email:
                     sesion.delete(test_email)
 
         sesion.commit()
 
         sesion.close()
-
-
-#        """ Save ddress book on disk into a DB file. """
-#        Session = sessionmaker(bind=ModelManager.engine)
-#        sesion = Session()
-#        for elem in address_book.book:
-#            sesion.add(elem)
-#        sesion.commit()
-#        sesion.close()
 
 
 # -----------------------------------------------------------------------------
@@ -412,8 +303,8 @@ class Contact(Base):
     firstname = Column(String(50), nullable=False)
     lastname = Column(String(50), nullable=False)
     mailing_address = Column(String(50), nullable=True)
-    phones = relationship("Phone", order_by="Phone.id")
-    emails = relationship("Email", order_by="Email.id")
+    phones = relationship("Phone", cascade="all,delete", order_by="Phone.id")
+    emails = relationship("Email", cascade="all,delete", order_by="Email.id")
     address_book_id = Column(Integer, ForeignKey('addressbook.id'))
 
     def __init__(
@@ -444,26 +335,55 @@ class Contact(Base):
             "|".join(self.phones)
         ]
 
+    def find_phone(self, phonetest):
+        """ Find a phone in Contact (if the phone exist already exist) """
+        search_phone = None
+        tmp_phone = Phone(phonetest)
+
+        for phone in self.phones:
+            if phone == tmp_phone:
+                search_phone = phone
+                LOG.warn(
+                    "This phone number {} is already atribute to this contact.".format(phone))
+                break
+        return search_phone
+
     def add_phone(self, new_phone):
         """ Add the new_phone number in the list of phones of the contact. """
+
+        test_phone = self.find_phone(new_phone)
         if new_phone and \
             ContactChecker.check_phone(new_phone) and \
-                new_phone not in self.phones:
+                not test_phone:
             new_correct_phone = Phone(new_phone)
             self.phones.append(new_correct_phone)
-        el
 
     def remove_phone(self, old_phone):
         """ remove the old_phone number in the list of phones of the contact.
         if this number exist """
-        if old_phone in self.phones:
+        phonetoremove = self.find_phone(old_phone)
+        if phonetoremove:
             self.phones.remove(old_phone)
+
+    def find_email(self, emailtest):
+        """ Find a contact in AddressBook (if the contact exist) """
+        search_email = None
+        tmp_email = Email(emailtest)
+
+        for email in self.emails:
+            if email == tmp_email:
+                search_email = email
+                LOG.warn(
+                    "This email address {} is already atribute to this contact.".format(email))
+                break
+        return search_email
 
     def add_email(self, new_email):
         """ Add the new_email in the list of emails of the contact. """
+        test_email = self.find_email(new_email)
         if new_email and \
             ContactChecker.check_email(new_email) and \
-                new_email not in self.emails:
+                not test_email:
             new_correct_email = Email(new_email)
             self.emails.append(new_correct_email)
 
@@ -567,6 +487,10 @@ class Phone(Base):
     def __init__(self, phone):
         self.phonenumber = phone
 
+    def __eq__(self, other):
+        return (
+            self.phonenumber == other.phonenumber)
+
     def __str__(self):
         to_display = "{}".format(self.phonenumber)
         return(to_display)
@@ -583,6 +507,10 @@ class Email(Base):
 
     def __init__(self, email):
         self.address = email
+
+    def __eq__(self, other):
+        return (
+            self.address == other.address)
 
     def __str__(self):
         to_display = "{}".format(self.address)
