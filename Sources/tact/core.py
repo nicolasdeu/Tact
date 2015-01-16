@@ -42,36 +42,6 @@ class Base(object):
     id = Column(Integer, primary_key=True)
 
 
-def execute(attempt):
-    def wrapper(func):
-        def wrapped(self, *args):
-            Session = sessionmaker(bind=ModelManager.engine)
-            sesion = Session()
-            addressbookname = args[0]
-            firstname = args[1]
-            lastname = args[2]
-            if attempt == 1:
-                #mailing_address = args[3] emails = args[4] phones = args[5]
-                func(
-                    self, sesion,
-                    addressbookname, firstname, lastname,
-                    args[3], args[4], args[5])
-            elif attempt == 2:
-                phones = args[3]
-                func(
-                    self, sesion, addressbookname, firstname, lastname, phones)
-            elif attempt == 3:
-                emails = args[3]
-                func(
-                    self, sesion, addressbookname, firstname, lastname, emails)
-            else:
-                func(self, sesion, addressbookname, firstname, lastname)
-            sesion.commit()
-            sesion.close()
-        return wrapped
-    return wrapper
-
-
 # -----------------------------------------------------------------------------
 #
 # AddressBook class
@@ -188,12 +158,19 @@ class ModelManager:
             'sqlite:///{}'.format(ModelManager.DATA_FILE), echo=False)
         Base.metadata.create_all(self.engine)
 
-    def find_addressbook(self, sesion, adressbookname):
+        Session = sessionmaker(bind=ModelManager.engine)
+        self.sesion = Session()
+
+    def close_sesion(self):
+        self.sesion.commit()
+        self.sesion.close()
+
+    def find_addressbook(self, adressbookname):
         """ Query to find a address email. """
 
         book = None
 
-        query_find = sesion.query(AddressBook).filter(
+        query_find = self.sesion.query(AddressBook).filter(
             AddressBook.name == adressbookname)
 
         if query_find.all():
@@ -201,12 +178,11 @@ class ModelManager:
 
         return book
 
-    @execute(1)
     def add_contact(
-            self, sesion, abname, firstname, lastname,
+            self, abname, firstname, lastname,
             mailing_address, emails, phones):
 
-        address_book = self.find_addressbook(sesion, abname)
+        address_book = self.find_addressbook(abname)
         if address_book:
             address_book.add_contact(
                 firstname, lastname, mailing_address, emails, phones)
@@ -218,71 +194,76 @@ class ModelManager:
 
         print(address_book)
 
-        sesion.add(address_book)
+        self.sesion.add(address_book)
 
-    @execute(0)
+        self.close_sesion()
+
     def find(self, sesion, abname, firstname, lastname):
 
         contact = None
 
-        address_book = self.find_addressbook(sesion, abname)
+        address_book = self.find_addressbook(abname)
 
         if address_book:
             contact = address_book.find_contact(firstname, lastname)
 
         print(contact)
 
-    @execute(0)
-    def remove(self, sesion, abname, firstname, lastname):
+        self.close_sesion()
 
-        address_book = self.find_addressbook(sesion, abname)
+    def remove(self, abname, firstname, lastname):
+
+        address_book = self.find_addressbook(abname)
 
         if address_book:
-            address_book.remove_contact(sesion, firstname, lastname)
+            address_book.remove_contact(self.sesion, firstname, lastname)
 
-    @execute(2)
-    def add_phone(self, sesion, abname, firstname, lastname, phone):
+        self.close_sesion()
 
-        address_book = self.find_addressbook(sesion, abname)
+    def add_phone(self, abname, firstname, lastname, phone):
+
+        address_book = self.find_addressbook(abname)
 
         if address_book:
             contact = address_book.find_contact(firstname, lastname)
             if contact:
                 contact.add_phone(phone)
 
-    @execute(2)
-    def remove_phone(self, sesion, abname, firstname, lastname, phone):
+        self.close_sesion()
 
-        address_book = self.find_addressbook(sesion, abname)
+    def remove_phone(self, abname, firstname, lastname, phone):
+
+        address_book = self.find_addressbook(abname)
 
         if address_book:
             contact = address_book.find_contact(firstname, lastname)
             if contact:
                 test_phone = contact.find_phone(phone)
                 if test_phone:
-                    sesion.delete(test_phone)
+                    self.sesion.delete(test_phone)
+        self.close_sesion()
 
-    @execute(3)
-    def add_email(self, sesion, abname, firstname, lastname, email):
+    def add_email(self, abname, firstname, lastname, email):
 
-        address_book = self.find_addressbook(sesion, abname)
+        address_book = self.find_addressbook(abname)
 
         if address_book:
             contact = address_book.find_contact(firstname, lastname)
             if contact:
                 contact.add_email(email)
+        self.close_sesion()
 
-    @execute(3)
-    def remove_email(self, sesion, abname, firstname, lastname, email):
+    def remove_email(self, abname, firstname, lastname, email):
 
-        address_book = self.find_addressbook(sesion, abname)
+        address_book = self.find_addressbook(abname)
 
         if address_book:
             contact = address_book.find_contact(firstname, lastname)
             if contact:
                 test_email = contact.find_email(email)
                 if test_email:
-                    sesion.delete(test_email)
+                    self.sesion.delete(test_email)
+        self.close_sesion()
 
 
 # -----------------------------------------------------------------------------
