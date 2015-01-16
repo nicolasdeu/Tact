@@ -42,6 +42,36 @@ class Base(object):
     id = Column(Integer, primary_key=True)
 
 
+def execute(attempt):
+    def wrapper(func):
+        def wrapped(self, *args):
+            Session = sessionmaker(bind=ModelManager.engine)
+            sesion = Session()
+            addressbookname = args[0]
+            firstname = args[1]
+            lastname = args[2]
+            if attempt == 1:
+                #mailing_address = args[3] emails = args[4] phones = args[5]
+                func(
+                    self, sesion,
+                    addressbookname, firstname, lastname,
+                    args[3], args[4], args[5])
+            elif attempt == 2:
+                phones = args[3]
+                func(
+                    self, sesion, addressbookname, firstname, lastname, phones)
+            elif attempt == 3:
+                emails = args[3]
+                func(
+                    self, sesion, addressbookname, firstname, lastname, emails)
+            else:
+                func(self, sesion, addressbookname, firstname, lastname)
+            sesion.commit()
+            sesion.close()
+        return wrapped
+    return wrapper
+
+
 # -----------------------------------------------------------------------------
 #
 # AddressBook class
@@ -171,12 +201,10 @@ class ModelManager:
 
         return book
 
+    @execute(1)
     def add_contact(
-            self, abname, firstname, lastname,
+            self, sesion, abname, firstname, lastname,
             mailing_address, emails, phones):
-
-        Session = sessionmaker(bind=ModelManager.engine)
-        sesion = Session()
 
         address_book = self.find_addressbook(sesion, abname)
         if address_book:
@@ -191,15 +219,10 @@ class ModelManager:
         print(address_book)
 
         sesion.add(address_book)
-        sesion.commit()
 
-        sesion.close()
+    @execute(0)
+    def find(self, sesion, abname, firstname, lastname):
 
-    def find(
-            self, abname, firstname, lastname):
-
-        Session = sessionmaker(bind=ModelManager.engine)
-        sesion = Session()
         contact = None
 
         address_book = self.find_addressbook(sesion, abname)
@@ -209,25 +232,16 @@ class ModelManager:
 
         print(contact)
 
-        sesion.close()
-
-    def remove(self, abname, firstname, lastname):
-
-        Session = sessionmaker(bind=ModelManager.engine)
-        sesion = Session()
+    @execute(0)
+    def remove(self, sesion, abname, firstname, lastname):
 
         address_book = self.find_addressbook(sesion, abname)
 
         if address_book:
             address_book.remove_contact(sesion, firstname, lastname)
 
-        sesion.commit()
-
-        sesion.close()
-
-    def add_phone(self, abname, firstname, lastname, phone):
-        Session = sessionmaker(bind=ModelManager.engine)
-        sesion = Session()
+    @execute(2)
+    def add_phone(self, sesion, abname, firstname, lastname, phone):
 
         address_book = self.find_addressbook(sesion, abname)
 
@@ -236,13 +250,8 @@ class ModelManager:
             if contact:
                 contact.add_phone(phone)
 
-        sesion.commit()
-
-        sesion.close()
-
-    def remove_phone(self, abname, firstname, lastname, phone):
-        Session = sessionmaker(bind=ModelManager.engine)
-        sesion = Session()
+    @execute(2)
+    def remove_phone(self, sesion, abname, firstname, lastname, phone):
 
         address_book = self.find_addressbook(sesion, abname)
 
@@ -253,13 +262,8 @@ class ModelManager:
                 if test_phone:
                     sesion.delete(test_phone)
 
-        sesion.commit()
-
-        sesion.close()
-
-    def add_email(self, abname, firstname, lastname, email):
-        Session = sessionmaker(bind=ModelManager.engine)
-        sesion = Session()
+    @execute(3)
+    def add_email(self, sesion, abname, firstname, lastname, email):
 
         address_book = self.find_addressbook(sesion, abname)
 
@@ -268,13 +272,8 @@ class ModelManager:
             if contact:
                 contact.add_email(email)
 
-        sesion.commit()
-
-        sesion.close()
-
-    def remove_email(self, abname, firstname, lastname, email):
-        Session = sessionmaker(bind=ModelManager.engine)
-        sesion = Session()
+    @execute(3)
+    def remove_email(self, sesion, abname, firstname, lastname, email):
 
         address_book = self.find_addressbook(sesion, abname)
 
@@ -284,10 +283,6 @@ class ModelManager:
                 test_email = contact.find_email(email)
                 if test_email:
                     sesion.delete(test_email)
-
-        sesion.commit()
-
-        sesion.close()
 
 
 # -----------------------------------------------------------------------------
@@ -344,7 +339,7 @@ class Contact(Base):
             if phone == tmp_phone:
                 search_phone = phone
                 LOG.warn(
-                    "This phone number {} is already atribute to this contact.".format(phone))
+                    "This phone number {} is (already) atribute to this contact.".format(phone))
                 break
         return search_phone
 
@@ -374,7 +369,7 @@ class Contact(Base):
             if email == tmp_email:
                 search_email = email
                 LOG.warn(
-                    "This email address {} is already atribute to this contact.".format(email))
+                    "This email address {} is (already) atribute to this contact.".format(email))
                 break
         return search_email
 
