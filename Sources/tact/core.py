@@ -49,12 +49,31 @@ class Base(object):
 # -----------------------------------------------------------------------------
 class opensession(object):
 
+    ''' Context manager for the with opensession '''
+
+    def __init__(self, abname):
+        ''' Initialisation for store the addressbookname. '''
+        self.addressbookname = abname
+
     def __enter__(self):
+        ''' Creation of the sesion , test if addressbook exist and return the
+        two'''
+
         Session = sessionmaker(bind=ModelManager.engine)
         self.sesion = Session()
-        return self.sesion
+
+        book = None
+
+        query_find = self.sesion.query(AddressBook).filter(
+            AddressBook.name == self.addressbookname)
+
+        if query_find.all():
+            book = query_find.one()
+
+        return self.sesion, book
 
     def __exit__(self, type, value, traceback):
+        ''' Commit and close the sesion'''
         self.sesion.commit()
         self.sesion.close()
 
@@ -99,6 +118,7 @@ class AddressBook(Base):
             self,
             firstname, lastname,
             mailing_address="", emails=[], phones=[]):
+        """ Check if contact doesn't already exist before append. """
 
         test_contact = self.find_contact(firstname, lastname)
         if not test_contact:
@@ -123,26 +143,36 @@ class AddressBook(Base):
         return data
 
     def remove_contact(self, sesion, firstname, lastname,):
+        ''' Remove a the contact (if exist) from the current address book.'''
         contact = self.find_contact(firstname, lastname)
         if contact:
             sesion.delete(contact)
 
     def add_contact_phone(self, firstname, lastname, phone):
+        ''' Add a phone to the contact (if this contact exist)
+        from the current address book.'''
+
         contact = self.find_contact(firstname, lastname)
         if contact:
             contact.add_phone(phone)
 
     def remove_contact_phone(self, firstname, lastname, phone):
+        ''' Remove a phone to the contact (if this contact exist)
+        from the current address book.'''
         contact = self.find_contact(firstname, lastname)
         if contact:
             contact.remove_phone(phone)
 
     def add_contact_email(self, firstname, lastname, email):
+        ''' Add a email to the contact (if this contact exist)
+        from the current address book.'''
         contact = self.find_contact(firstname, lastname)
         if contact:
             contact.add_email(email)
 
     def remove_contact_email(self, firstname, lastname, email):
+        ''' Remove a email to the contact (if this contact exist)
+        from the current address book.'''
         contact = self.find_contact(firstname, lastname)
         if contact:
             contact.remove_email(email)
@@ -176,7 +206,7 @@ class ModelManager:
         Base.metadata.create_all(self.engine)
 
     def find_addressbook(self, session, adressbookname):
-        """ Query to find a address email. """
+        """ Query to find a AddressBook. """
 
         book = None
 
@@ -191,9 +221,12 @@ class ModelManager:
     def add_contact(
             self, abname, firstname, lastname,
             mailing_address, emails, phones):
+        ''' If abname found, add the contact to this addressbook,
+        else,
+        create a new addressbookand add the contact to this AddressBook.'''
 
-        with opensession() as session:
-            address_book = self.find_addressbook(session, abname)
+        with opensession(abname) as (session, address_book):
+
             if address_book:
                 address_book.add_contact(
                     firstname, lastname, mailing_address, emails, phones)
@@ -208,11 +241,10 @@ class ModelManager:
             session.add(address_book)
 
     def find(self, abname, firstname, lastname):
+        ''' Find the contact in this address book (if exist). '''
 
-        with opensession() as session:
+        with opensession(abname) as (session, address_book):
             contact = None
-
-            address_book = self.find_addressbook(session, abname)
 
             if address_book:
                 contact = address_book.find_contact(firstname, lastname)
@@ -220,17 +252,16 @@ class ModelManager:
             print(contact)
 
     def remove(self, abname, firstname, lastname):
+        ''' Remove the contact in this address book (if exist). '''
 
-        with opensession() as session:
-            address_book = self.find_addressbook(session, abname)
+        with opensession(abname) as (session, address_book):
 
             if address_book:
                 address_book.remove_contact(session, firstname, lastname)
 
     def add_phone(self, abname, firstname, lastname, phone):
 
-        with opensession() as session:
-            address_book = self.find_addressbook(session, abname)
+        with opensession(abname) as (session, address_book):
 
             if address_book:
                 contact = address_book.find_contact(firstname, lastname)
@@ -239,8 +270,7 @@ class ModelManager:
 
     def remove_phone(self, abname, firstname, lastname, phone):
 
-        with opensession() as session:
-            address_book = self.find_addressbook(session, abname)
+        with opensession(abname) as (session, address_book):
 
             if address_book:
                 contact = address_book.find_contact(firstname, lastname)
@@ -251,8 +281,7 @@ class ModelManager:
 
     def add_email(self, abname, firstname, lastname, email):
 
-        with opensession() as session:
-            address_book = self.find_addressbook(session, abname)
+        with opensession(abname) as (session, address_book):
 
             if address_book:
                 contact = address_book.find_contact(firstname, lastname)
@@ -261,8 +290,7 @@ class ModelManager:
 
     def remove_email(self, abname, firstname, lastname, email):
 
-        with opensession() as session:
-            address_book = self.find_addressbook(session, abname)
+        with opensession(abname) as (session, address_book):
 
             if address_book:
                 contact = address_book.find_contact(firstname, lastname)
@@ -463,6 +491,8 @@ class ContactChecker:
 #
 # -----------------------------------------------------------------------------
 class Phone(Base):
+
+    """ Create a new Phone. """
     phonenumber = Column(String(22), nullable=False)
     contact_id = Column(Integer, ForeignKey('contact.id'))
 
@@ -484,6 +514,8 @@ class Phone(Base):
 #
 # -----------------------------------------------------------------------------
 class Email(Base):
+
+    """ Create a new Email. """
     address = Column(String(150), nullable=False)
     contact_id = Column(Integer, ForeignKey('contact.id'))
 
