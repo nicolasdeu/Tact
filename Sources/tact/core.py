@@ -44,6 +44,23 @@ class Base(object):
 
 # -----------------------------------------------------------------------------
 #
+# opensession
+#
+# -----------------------------------------------------------------------------
+class opensession(object):
+
+    def __enter__(self):
+        Session = sessionmaker(bind=ModelManager.engine)
+        self.sesion = Session()
+        return self.sesion
+
+    def __exit__(self, type, value, traceback):
+        self.sesion.commit()
+        self.sesion.close()
+
+
+# -----------------------------------------------------------------------------
+#
 # AddressBook class
 #
 # -----------------------------------------------------------------------------
@@ -158,19 +175,12 @@ class ModelManager:
             'sqlite:///{}'.format(ModelManager.DATA_FILE), echo=False)
         Base.metadata.create_all(self.engine)
 
-        Session = sessionmaker(bind=ModelManager.engine)
-        self.sesion = Session()
-
-    def close_sesion(self):
-        self.sesion.commit()
-        self.sesion.close()
-
-    def find_addressbook(self, adressbookname):
+    def find_addressbook(self, session, adressbookname):
         """ Query to find a address email. """
 
         book = None
 
-        query_find = self.sesion.query(AddressBook).filter(
+        query_find = session.query(AddressBook).filter(
             AddressBook.name == adressbookname)
 
         if query_find.all():
@@ -182,88 +192,84 @@ class ModelManager:
             self, abname, firstname, lastname,
             mailing_address, emails, phones):
 
-        address_book = self.find_addressbook(abname)
-        if address_book:
-            address_book.add_contact(
-                firstname, lastname, mailing_address, emails, phones)
+        with opensession() as session:
+            address_book = self.find_addressbook(session, abname)
+            if address_book:
+                address_book.add_contact(
+                    firstname, lastname, mailing_address, emails, phones)
 
-        else:
-            address_book = AddressBook(abname)
-            address_book.add_contact(
-                firstname, lastname, mailing_address, emails, phones)
+            else:
+                address_book = AddressBook(abname)
+                address_book.add_contact(
+                    firstname, lastname, mailing_address, emails, phones)
 
-        print(address_book)
+            print(address_book)
 
-        self.sesion.add(address_book)
+            session.add(address_book)
 
-        self.close_sesion()
+    def find(self, abname, firstname, lastname):
 
-    def find(self, sesion, abname, firstname, lastname):
+        with opensession() as session:
+            contact = None
 
-        contact = None
+            address_book = self.find_addressbook(session, abname)
 
-        address_book = self.find_addressbook(abname)
+            if address_book:
+                contact = address_book.find_contact(firstname, lastname)
 
-        if address_book:
-            contact = address_book.find_contact(firstname, lastname)
-
-        print(contact)
-
-        self.close_sesion()
+            print(contact)
 
     def remove(self, abname, firstname, lastname):
 
-        address_book = self.find_addressbook(abname)
+        with opensession() as session:
+            address_book = self.find_addressbook(session, abname)
 
-        if address_book:
-            address_book.remove_contact(self.sesion, firstname, lastname)
-
-        self.close_sesion()
+            if address_book:
+                address_book.remove_contact(session, firstname, lastname)
 
     def add_phone(self, abname, firstname, lastname, phone):
 
-        address_book = self.find_addressbook(abname)
+        with opensession() as session:
+            address_book = self.find_addressbook(session, abname)
 
-        if address_book:
-            contact = address_book.find_contact(firstname, lastname)
-            if contact:
-                contact.add_phone(phone)
-
-        self.close_sesion()
+            if address_book:
+                contact = address_book.find_contact(firstname, lastname)
+                if contact:
+                    contact.add_phone(phone)
 
     def remove_phone(self, abname, firstname, lastname, phone):
 
-        address_book = self.find_addressbook(abname)
+        with opensession() as session:
+            address_book = self.find_addressbook(session, abname)
 
-        if address_book:
-            contact = address_book.find_contact(firstname, lastname)
-            if contact:
-                test_phone = contact.find_phone(phone)
-                if test_phone:
-                    self.sesion.delete(test_phone)
-        self.close_sesion()
+            if address_book:
+                contact = address_book.find_contact(firstname, lastname)
+                if contact:
+                    test_phone = contact.find_phone(phone)
+                    if test_phone:
+                        session.delete(test_phone)
 
     def add_email(self, abname, firstname, lastname, email):
 
-        address_book = self.find_addressbook(abname)
+        with opensession() as session:
+            address_book = self.find_addressbook(session, abname)
 
-        if address_book:
-            contact = address_book.find_contact(firstname, lastname)
-            if contact:
-                contact.add_email(email)
-        self.close_sesion()
+            if address_book:
+                contact = address_book.find_contact(firstname, lastname)
+                if contact:
+                    contact.add_email(email)
 
     def remove_email(self, abname, firstname, lastname, email):
 
-        address_book = self.find_addressbook(abname)
+        with opensession() as session:
+            address_book = self.find_addressbook(session, abname)
 
-        if address_book:
-            contact = address_book.find_contact(firstname, lastname)
-            if contact:
-                test_email = contact.find_email(email)
-                if test_email:
-                    self.sesion.delete(test_email)
-        self.close_sesion()
+            if address_book:
+                contact = address_book.find_contact(firstname, lastname)
+                if contact:
+                    test_email = contact.find_email(email)
+                    if test_email:
+                        session.delete(test_email)
 
 
 # -----------------------------------------------------------------------------
