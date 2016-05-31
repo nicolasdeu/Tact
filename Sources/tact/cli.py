@@ -255,7 +255,7 @@ def run():
 
     parser_find.add_argument(
         'addressbook', action='store', metavar='ADDRESS_BOOK',
-        help='THE Address Book where the contact must be modified.')
+        help='THE Address Book where the contact must be find.')
 
     parser_find.add_argument(
         'firstname', action='store', metavar='FIRSTNAME',
